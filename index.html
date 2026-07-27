@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 AI 건강 코치</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+  </style>
+</head>
+<body class="bg-blue-50/50 min-h-screen text-slate-800 flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-blue-100 py-4 px-6 shadow-sm">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xl">
+          <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+        <h1 class="text-xl font-bold text-blue-900">CareMate AI</h1>
+      </div>
+      <button id="notifyBtn" onclick="requestNotificationPermission()" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+        <i class="fa-regular fa-bell"></i> 알림 활성화
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 flex-1 flex flex-col gap-6 w-full">
+
+    <!-- Top Section: Input Form -->
+    <section class="bg-white rounded-2xl p-6 shadow-sm border border-blue-100">
+      <h2 class="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-blue-500"></i> 나의 건강 정보 입력하기
+      </h2>
+      <p class="text-sm text-slate-500 mb-4">현재 건강 상태, 약/영양제 복용 루틴, 예정된 병원 진료를 자유롭게 입력해 주세요.</p>
+      
+      <textarea id="healthInput" rows="4" 
+        class="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none text-slate-700 placeholder-slate-400 bg-slate-50/50"
+        placeholder="예시:&#10;- 건강상태: 공복혈당 110, 혈압 125/80, 몸무게 70kg, BMI 23.5&#10;- 복용 약/영양제: 혈압약 1일 1회(아침 총 30알), 비타민C 1일 2회(점심/저녁)&#10;- 예정 진료: 다음 주 수요일 오후 2시 내과 정기검진"></textarea>
+      
+      <div class="mt-4 flex justify-end">
+        <button id="submitBtn" onclick="generatePlan()" 
+          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md transition flex items-center gap-2">
+          <span>맞춤 케어 플랜 생성하기</span>
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- Bottom Section: Split Screen Output -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-[500px]">
+      
+      <!-- Left: Timeline (5 Cols) -->
+      <div class="lg:col-span-5 bg-white rounded-2xl p-6 shadow-sm border border-blue-100 flex flex-col">
+        <h3 class="text-lg font-bold text-blue-900 mb-4 flex items-center justify-between border-b pb-3">
+          <span class="flex items-center gap-2">
+            <i class="fa-regular fa-clock text-blue-500"></i> 오늘의 타임테이블
+          </span>
+          <span id="currentTime" class="text-xs font-normal text-slate-400">00:00</span>
+        </h3>
+        
+        <div id="timelineContainer" class="flex-1 overflow-y-auto space-y-4 pr-2 text-slate-400 text-center flex flex-col justify-center items-center">
+          <i class="fa-solid fa-calendar-day text-4xl text-slate-200 mb-2"></i>
+          <p class="text-sm">입력창에 정보를 적고 버튼을 누르면<br>오늘의 맞춤 스케줄이 생성됩니다.</p>
+        </div>
+      </div>
+
+      <!-- Right: Detailed Text (7 Cols) -->
+      <div class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-blue-100 flex flex-col">
+        <h3 class="text-lg font-bold text-blue-900 mb-4 border-b pb-3 flex items-center gap-2">
+          <i class="fa-solid fa-notes-medical text-blue-500"></i> AI 건강 케어 리포트
+        </h3>
+        
+        <div id="detailContainer" class="flex-1 overflow-y-auto text-slate-600 leading-relaxed space-y-4">
+          <div class="h-full flex flex-col justify-center items-center text-slate-400 text-center">
+            <i class="fa-solid fa-file-medical text-4xl text-slate-200 mb-2"></i>
+            <p class="text-sm">식단, 운동, 약 복용 가이드가<br>이곳에 상세히 정리됩니다.</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Script logic -->
+  <script>
+    let activeSchedule = [];
+    let notifiedTimes = new Set();
+
+    function requestNotificationPermission() {
+      if (!("Notification" in window)) {
+        alert("이 브라우저는 알림 기능을 지원하지 않습니다.");
+        return;
+      }
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          alert("알림이 활성화되었습니다!");
+        }
+      });
+    }
+
+    async function generatePlan() {
+      const input = document.getElementById('healthInput').value.trim();
+      if (!input) {
+        alert('건강 정보를 입력해 주세요.');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const timelineContainer = document.getElementById('timelineContainer');
+      const detailContainer = document.getElementById('detailContainer');
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 분석 중...`;
+      
+      timelineContainer.innerHTML = `<div class="h-full flex items-center justify-center text-blue-500"><i class="fa-solid fa-spinner animate-spin text-3xl"></i></div>`;
+      detailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-blue-500"><i class="fa-solid fa-spinner animate-spin text-3xl"></i></div>`;
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ healthInfo: input })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || '오류 발생');
+
+        activeSchedule = data.schedule || [];
+        notifiedTimes.clear();
+
+        renderTimeline(activeSchedule);
+        renderDetail(data.detailedPlan);
+
+      } catch (err) {
+        alert('에러: ' + err.message);
+        timelineContainer.innerHTML = `<p class="text-red-500 text-sm">불러오기에 실패했습니다.</p>`;
+        detailContainer.innerHTML = `<p class="text-red-500 text-sm">불러오기에 실패했습니다.</p>`;
+      } font-medium {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>맞춤 케어 플랜 생성하기</span><i class="fa-solid fa-wand-magic-sparkles"></i>`;
+      }
+    }
+
+    function renderTimeline(schedule) {
+      const container = document.getElementById('timelineContainer');
+      if (!schedule.length) {
+        container.innerHTML = `<p class="text-slate-400 text-sm">생성된 일정이 없습니다.</p>`;
+        return;
+      }
+
+      const iconMap = {
+        '약': 'fa-pills text-emerald-500 bg-emerald-50',
+        '식단': 'fa-utensils text-amber-500 bg-amber-50',
+        '운동': 'fa-person-running text-blue-500 bg-blue-50',
+        '병원': 'fa-hospital text-rose-500 bg-rose-50'
+      };
+
+      container.className = "flex-1 overflow-y-auto space-y-3 pr-1";
+      container.innerHTML = schedule.map(item => {
+        const style = iconMap[item.type] || 'fa-check text-blue-500 bg-blue-50';
+        const [icon, colorClass] = style.split(' ');
+
+        return `
+          <div class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 transition bg-slate-50/50">
+            <div class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 font-semibold text-xs mt-0.5">
+              ${item.time}
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-slate-800">${item.title}</div>
+            </div>
+            <div class="w-8 h-8 rounded-lg ${colorClass} flex items-center justify-center text-xs">
+              <i class="fa-solid ${icon}"></i>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderDetail(text) {
+      const container = document.getElementById('detailContainer');
+      const formattedText = text.replace(/\n/g, '<br>');
+      container.innerHTML = `<div class="bg-blue-50/30 p-4 rounded-xl border border-blue-50 text-slate-700 text-sm leading-relaxed">${formattedText}</div>`;
+    }
+
+    setInterval(() => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${hours}:${minutes}`;
+
+      document.getElementById('currentTime').innerText = currentTimeStr;
+
+      activeSchedule.forEach(item => {
+        if (item.time === currentTimeStr && !notifiedTimes.has(item.time + item.title)) {
+          notifiedTimes.add(item.time + item.title);
+          triggerNotification(item);
+        }
+      });
+    }, 1000);
+
+    function triggerNotification(item) {
+      if (Notification.permission === "granted") {
+        new Notification("CareMate AI 건강 알림", {
+          body: `[${item.time}] ${item.title}`,
+          icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'
+        });
+      } else {
+        alert(`⏰ [${item.time}] ${item.title}`);
+      }
+    }
+  </script>
+</body>
+</html>

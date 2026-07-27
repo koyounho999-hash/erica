@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: '건강 정보를 입력해주세요.' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY_1;
   if (!apiKey) {
     return res.status(500).json({ error: 'GEMINI_API_KEY_1가 설정되지 않았습니다.' });
   }

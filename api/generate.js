@@ -51,9 +51,9 @@ ${healthInfo}
 위 사용자 정보를 바탕으로 [약 복용시간, 식단, 운동, 예정된 병원 진료 및 검사]가 포함된 하루 타임테이블과 상세 건강 리포트를 작성해 주세요.
 `;
 
-    // 💡 올바른 모델명(gemini-2.5-flash) 사용
+    //  올바른 모델명(gemini-2.5-flash) 사용
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',

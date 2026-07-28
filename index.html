@@ -3,216 +3,490 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>스마트 AI 건강 코치</title>
+  <title>스마트 AI 공부 메이트 & 커뮤니티</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
-    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+    body { background-color: #f0f7ff; color: #1e293b; font-family: system-ui, -apple-system, sans-serif; }
+    .bg-blue-primary { background-color: #2563eb; }
+    .bg-blue-soft { background-color: #eff6ff; }
+    .text-blue-primary { color: #2563eb; }
+    /* 앱 잠금 모드 전체화면 */
+    #lockOverlay { display: none; }
+    #lockOverlay.active { display: flex; }
   </style>
 </head>
-<body class="bg-blue-50/50 min-h-screen text-slate-800 flex flex-col">
+<body class="min-h-screen p-4 md:p-6 flex flex-col gap-6 max-w-7xl mx-auto">
 
-  <!-- Header -->
-  <header class="bg-white border-b border-blue-100 py-4 px-6 shadow-sm">
-    <div class="max-w-7xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xl">
-          <i class="fa-solid fa-heart-pulse"></i>
-        </div>
-        <h1 class="text-xl font-bold text-blue-900">CareMate AI</h1>
+  <!-- 헤더 & 재화/포인트 표시 -->
+  <header class="bg-white rounded-2xl p-5 shadow-sm border border-blue-100 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white text-xl">
+        <i class="fa-solid fa-graduation-cap"></i>
       </div>
-      <button id="notifyBtn" onclick="requestNotificationPermission()" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg transition flex items-center gap-1.5">
-        <i class="fa-regular fa-bell"></i> 알림 활성화
-      </button>
+      <div>
+        <h1 class="text-xl font-bold text-slate-800">Smart AI Study Companion</h1>
+        <p class="text-xs text-blue-500 font-medium">파란 하늘처럼 쾌적한 나의 학습 공간</p>
+      </div>
+    </div>
+    
+    <!-- 보유 재화 -->
+    <div class="bg-blue-soft border border-blue-200 px-4 py-2 rounded-xl flex items-center gap-2">
+      <i class="fa-solid fa-coins text-amber-500 text-lg"></i>
+      <span class="text-sm font-semibold text-slate-600">누적 재화:</span>
+      <span id="coinCount" class="text-lg font-bold text-blue-600">0</span>
+      <span class="text-xs text-slate-400">Gem</span>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="max-w-7xl mx-auto p-4 md:p-6 flex-1 flex flex-col gap-6 w-full">
+  <!-- [상단] 입력 영역 (성적 입력 & 공부 타이머 설정) -->
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+    <!-- 1. 성적 입력 및 반 결정 -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex flex-col justify-between">
+      <div>
+        <h2 class="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-blue-500"></i> AI 성적 분석 & 반 배치
+        </h2>
+        <div class="space-y-3">
+          <input type="text" id="gradeInput" placeholder="예: 국어 85, 수학 92, 영어 78 또는 주요 과목 등급" 
+                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+          <button id="analyzeBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition-colors text-sm">
+            AI 분석 및 반 결정 요청
+          </button>
+        </div>
+      </div>
+      <div id="classResult" class="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-700 text-center">
+        성적을 입력하시면 AI가 맞춤 반(상위/중위/하위)을 결정해 드립니다.
+      </div>
+    </div>
 
-    <!-- Top Section: Input Form -->
-    <section class="bg-white rounded-2xl p-6 shadow-sm border border-blue-100">
-      <h2 class="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
-        <i class="fa-solid fa-pen-to-square text-blue-500"></i> 나의 건강 정보 입력하기
-      </h2>
-      <p class="text-sm text-slate-500 mb-4">현재 건강 상태, 약/영양제 복용 루틴, 예정된 병원 진료를 자유롭게 입력해 주세요.</p>
-      
-      <textarea id="healthInput" rows="4" 
-        class="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none text-slate-700 placeholder-slate-400 bg-slate-50/50"
-        placeholder="예시:&#10;- 건강상태: 공복혈당 110, 혈압 125/80, 몸무게 70kg, BMI 23.5&#10;- 복용 약/영양제: 혈압약 1일 1회(아침 총 30알), 비타민C 1일 2회(점심/저녁)&#10;- 예정 진료: 다음 주 수요일 오후 2시 내과 정기검진"></textarea>
-      
-      <div class="mt-4 flex justify-end">
-        <button id="submitBtn" onclick="generatePlan()" 
-          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md transition flex items-center gap-2">
-          <span>맞춤 케어 플랜 생성하기</span>
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
+    <!-- 2. 공부 타이머 & 집중 시작 -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex flex-col justify-between">
+      <div>
+        <h2 class="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-clock text-blue-500"></i> AI 집중 공부 타이머
+        </h2>
+        <div class="flex items-center gap-4 mb-3">
+          <div class="text-3xl font-extrabold text-blue-600 font-mono tracking-wider" id="timerDisplay">25:00</div>
+          <div class="text-xs text-slate-500">
+            * 타이머 가동 시 다른 앱 사용 금지(잠금) 모드가 발동되며, 공부 시간에 따라 지속적으로 재화가 쌓입니다.
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button id="startBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2">
+          <i class="fa-solid fa-play"></i> 타이머 시작 & 잠금
+        </button>
+        <button id="stopBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-xl text-sm">
+          정지
         </button>
       </div>
-    </section>
+    </div>
 
-    <!-- Bottom Section: Split Screen Output -->
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-[500px]">
-      
-      <!-- Left: Timeline (5 Cols) -->
-      <div class="lg:col-span-5 bg-white rounded-2xl p-6 shadow-sm border border-blue-100 flex flex-col">
-        <h3 class="text-lg font-bold text-blue-900 mb-4 flex items-center justify-between border-b pb-3">
-          <span class="flex items-center gap-2">
-            <i class="fa-regular fa-clock text-blue-500"></i> 오늘의 타임테이블
-          </span>
-          <span id="currentTime" class="text-xs font-normal text-slate-400">00:00</span>
-        </h3>
-        
-        <div id="timelineContainer" class="flex-1 overflow-y-auto space-y-4 pr-2 text-slate-400 text-center flex flex-col justify-center items-center">
-          <i class="fa-solid fa-calendar-day text-4xl text-slate-200 mb-2"></i>
-          <p class="text-sm">입력창에 정보를 적고 버튼을 누르면<br>오늘의 맞춤 스케줄이 생성됩니다.</p>
-        </div>
+  </section>
+
+  <!-- [중단] 2분할 출력 영역 (왼쪽: 타임테이블 / 오른쪽: AI 설명 리포트) -->
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+    <!-- 중단 좌측: 타임테이블 (알람 기능 포함) -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex flex-col">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
+          <i class="fa-solid fa-calendar-check text-blue-500"></i> 오늘 학습 타임테이블
+        </h2>
+        <button id="addScheduleBtn" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg font-medium">
+          + 일정 추가
+        </button>
       </div>
 
-      <!-- Right: Detailed Text (7 Cols) -->
-      <div class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-blue-100 flex flex-col">
-        <h3 class="text-lg font-bold text-blue-900 mb-4 border-b pb-3 flex items-center gap-2">
-          <i class="fa-solid fa-notes-medical text-blue-500"></i> AI 건강 케어 리포트
-        </h3>
-        
-        <div id="detailContainer" class="flex-1 overflow-y-auto text-slate-600 leading-relaxed space-y-4">
-          <div class="h-full flex flex-col justify-center items-center text-slate-400 text-center">
-            <i class="fa-solid fa-file-medical text-4xl text-slate-200 mb-2"></i>
-            <p class="text-sm">식단, 운동, 약 복용 가이드가<br>이곳에 상세히 정리됩니다.</p>
+      <!-- 일정 목록 -->
+      <div id="scheduleList" class="space-y-3 overflow-y-auto max-h-[300px] pr-1">
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100" data-time="09:00" data-task="수학 오답노트 정리">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold bg-blue-500 text-white px-2.5 py-1 rounded-md">09:00</span>
+            <span class="text-sm font-medium text-slate-700">수학 오답노트 정리</span>
           </div>
+          <span class="text-xs text-blue-500 font-semibold flex items-center gap-1">
+            <i class="fa-regular fa-bell"></i> 알람 대기
+          </span>
+        </div>
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100" data-time="14:00" data-task="영어 단어 50개 암기">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold bg-blue-500 text-white px-2.5 py-1 rounded-md">14:00</span>
+            <span class="text-sm font-medium text-slate-700">영어 단어 50개 암기</span>
+          </div>
+          <span class="text-xs text-blue-500 font-semibold flex items-center gap-1">
+            <i class="fa-regular fa-bell"></i> 알람 대기
+          </span>
         </div>
       </div>
+    </div>
 
-    </section>
-  </main>
+    <!-- 중단 우측: AI 설명 및 진단 결과 -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex flex-col">
+      <h2 class="text-base font-bold text-slate-700 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-robot text-blue-500"></i> AI 메이트 리포트 & 학습 피드백
+      </h2>
+      <div id="aiResponse" class="flex-1 p-4 rounded-xl bg-blue-50/50 border border-blue-100 text-sm text-slate-600 leading-relaxed overflow-y-auto max-h-[300px] whitespace-pre-wrap">
+AI 메이트가 준비되어 있습니다. 
+성적을 입력하면 맞춰진 클래스 분반 분석 결과를 안내해 드리며, 공부 타이머 완료 시 피드백을 전달해 드립니다.
+      </div>
+    </div>
 
-  <!-- Script logic -->
-  <script>
-    let activeSchedule = [];
-    let notifiedTimes = new Set();
+  </section>
 
-    function requestNotificationPermission() {
-      if (!("Notification" in window)) {
-        alert("이 브라우저는 알림 기능을 지원하지 않습니다.");
+  <!-- [하단] 추가 섹션 (Gemini 라이브 스트리밍 Q&A & Firebase 커뮤니티 게시판) -->
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+    <!-- 1. Gemini AI 자유 질문 (스트리밍) -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex flex-col">
+      <h2 class="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-comments text-blue-500"></i> Gemini AI 자유 질문 (실시간 스트리밍)
+      </h2>
+      <div class="space-y-3 mb-3">
+        <input type="text" id="geminiPrompt" placeholder="궁금한 학습 개념이나 문제를 질문하세요..." 
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+        <button id="btnAskGemini" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition-colors text-sm">
+          AI 실시간 질문하기
+        </button>
+      </div>
+      <div id="geminiOutput" class="flex-1 p-4 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-600 leading-relaxed overflow-y-auto max-h-[250px] whitespace-pre-wrap">
+응답이 여기에 실시간으로 출력됩니다.
+      </div>
+    </div>
+
+    <!-- 2. Firebase Firestore 게시판 -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex flex-col">
+      <h2 class="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-blue-500"></i> 학습 질의응답 게시판 (Firebase)
+      </h2>
+      <div class="space-y-2 mb-4">
+        <input type="text" id="postTitle" placeholder="제목" 
+               class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+        <textarea id="postContent" placeholder="내용을 작성하세요..." rows="2" 
+                  class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm resize-none"></textarea>
+        <div class="flex gap-2">
+          <button id="btnAddPost" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-xl transition-colors text-sm">
+            게시글 작성
+          </button>
+          <button id="btnFetchPosts" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl transition-colors text-sm">
+            목록 불러오기
+          </button>
+        </div>
+      </div>
+      <div id="postList" class="flex-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-600 overflow-y-auto max-h-[200px] space-y-2">
+등록된 게시글이 표시됩니다.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- [화면 잠금 / 몰입 모드 오버레이] -->
+  <div id="lockOverlay" class="fixed inset-0 bg-blue-900/95 backdrop-blur-md z-50 flex-col items-center justify-center text-white p-6">
+    <div class="text-center max-w-md space-y-6">
+      <div class="w-20 h-20 bg-blue-500/30 border-2 border-blue-300 rounded-full flex items-center justify-center mx-auto text-3xl animate-pulse">
+        <i class="fa-solid fa-lock text-blue-200"></i>
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold mb-2">집중 모드가 가동 중입니다</h2>
+        <p class="text-sm text-blue-200">스마트폰의 다른 앱 사용이 제한됩니다.<br>AI와 함께 목표 공부 시간을 완수해 보세요!</p>
+      </div>
+
+      <div class="text-5xl font-mono font-extrabold text-blue-300 tracking-wider py-4 bg-white/5 rounded-2xl border border-white/10" id="lockTimerDisplay">
+        25:00
+      </div>
+
+      <div class="p-3 bg-blue-800/60 rounded-xl text-xs text-blue-200 border border-blue-700">
+        <i class="fa-solid fa-coins text-amber-400 mr-1"></i> 공부 시간이 지남에 따라 실시간으로 재화가 적립됩니다.
+      </div>
+
+      <button id="unlockBtn" class="w-full bg-red-500/80 hover:bg-red-600 text-white font-medium py-3 rounded-xl transition-colors text-sm">
+        포기하고 잠금 해제하기
+      </button>
+    </div>
+  </div>
+
+  <!-- 알람 팝업 모달 -->
+  <dialog id="alarmModal" class="p-6 rounded-2xl shadow-xl border border-blue-200 max-w-sm w-full backdrop:bg-slate-900/40">
+    <div class="text-center space-y-4">
+      <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-xl">
+        <i class="fa-solid fa-bell"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800">일정 알람</h3>
+      <p id="alarmMessage" class="text-sm text-slate-600 font-medium"></p>
+      <button onclick="document.getElementById('alarmModal').close()" class="w-full bg-blue-600 text-white py-2 rounded-xl text-sm font-medium">
+        확인했습니다
+      </button>
+    </div>
+  </dialog>
+
+  <!-- ES Module Script (Firebase SDK 포함) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // ----------------------------------------------------
+    // 1. Firebase 초기화
+    // ----------------------------------------------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUMvBxVdmJCyJ0RCeAf6tvRG4QNa7c-8w",
+      authDomain: "erica-de83a.firebaseapp.com",
+      projectId: "erica-de83a",
+      storageBucket: "erica-de83a.firebasestorage.app",
+      messagingSenderId: "552341929553",
+      appId: "1:552341929553:web:4593c23ada328bce8d0270"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ----------------------------------------------------
+    // 2. Firebase CRUD 기능
+    // ----------------------------------------------------
+    document.getElementById('btnAddPost').addEventListener('click', async () => {
+      const title = document.getElementById('postTitle').value.trim();
+      const content = document.getElementById('postContent').value.trim();
+
+      if (!title || !content) {
+        alert('제목과 내용을 입력해주세요.');
         return;
       }
-      Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-          alert("알림이 활성화되었습니다!");
-        }
-      });
-    }
-
-    async function generatePlan() {
-      const input = document.getElementById('healthInput').value.trim();
-      if (!input) {
-        alert('건강 정보를 입력해 주세요.');
-        return;
-      }
-
-      const submitBtn = document.getElementById('submitBtn');
-      const timelineContainer = document.getElementById('timelineContainer');
-      const detailContainer = document.getElementById('detailContainer');
-
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 분석 중...`;
-      
-      timelineContainer.innerHTML = `<div class="h-full flex items-center justify-center text-blue-500"><i class="fa-solid fa-spinner animate-spin text-3xl"></i></div>`;
-      detailContainer.innerHTML = `<div class="h-full flex items-center justify-center text-blue-500"><i class="fa-solid fa-spinner animate-spin text-3xl"></i></div>`;
 
       try {
-        const response = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ healthInfo: input })
+        await addDoc(collection(db, "posts"), {
+          title: title,
+          content: content,
+          createdAt: new Date()
         });
+        alert('게시글이 성공적으로 저장되었습니다!');
+        document.getElementById('postTitle').value = '';
+        document.getElementById('postContent').value = '';
+        fetchPosts();
+      } catch (e) {
+        console.error("Error adding document: ", e);
+        alert('저장 중 오류 발생: ' + e.message);
+      }
+    });
 
-        const data = await response.json();
-
-        if (!response.ok) throw new Error(data.error || '오류 발생');
-
-        activeSchedule = data.schedule || [];
-        notifiedTimes.clear();
-
-        renderTimeline(activeSchedule);
-        renderDetail(data.detailedPlan);
-
-      } catch (err) {
-        alert('에러: ' + err.message);
-        timelineContainer.innerHTML = `<p class="text-red-500 text-sm">불러오기에 실패했습니다.</p>`;
-        detailContainer.innerHTML = `<p class="text-red-500 text-sm">불러오기에 실패했습니다.</p>`;
-      } font-medium {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>맞춤 케어 플랜 생성하기</span><i class="fa-solid fa-wand-magic-sparkles"></i>`;
+    async function fetchPosts() {
+      const postListDiv = document.getElementById('postList');
+      postListDiv.innerHTML = '불러오는 중...';
+      try {
+        const querySnapshot = await getDocs(collection(db, "posts"));
+        if (querySnapshot.empty) {
+          postListDiv.innerHTML = '<div class="text-slate-400">등록된 게시글이 없습니다.</div>';
+          return;
+        }
+        
+        let html = '';
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          html += `<div class="p-2.5 rounded-lg bg-white border border-slate-200">
+            <div class="font-bold text-slate-800">${data.title}</div>
+            <div class="text-xs text-slate-600 mt-1">${data.content}</div>
+          </div>`;
+        });
+        postListDiv.innerHTML = html;
+      } catch (e) {
+        console.error("Error getting documents: ", e);
+        postListDiv.innerHTML = '목록 로드 실패: ' + e.message;
       }
     }
 
-    function renderTimeline(schedule) {
-      const container = document.getElementById('timelineContainer');
-      if (!schedule.length) {
-        container.innerHTML = `<p class="text-slate-400 text-sm">생성된 일정이 없습니다.</p>`;
+    document.getElementById('btnFetchPosts').addEventListener('click', fetchPosts);
+
+    // ----------------------------------------------------
+    // 3. Gemini API (일반 및 스트리밍)
+    // ----------------------------------------------------
+    async function callGemini(prompt, type = 'general') {
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, type })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        return data.result;
+      } catch (err) {
+        alert(err.message || 'AI 서비스 연결 실패');
+        return null;
+      }
+    }
+
+    async function streamGemini(userPrompt, onChunkReceived) {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userPrompt }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '스트리밍 실패');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        fullText += chunk;
+
+        if (onChunkReceived) {
+          onChunkReceived(chunk, fullText);
+        }
+      }
+
+      return fullText;
+    }
+
+    // Gemini 스트리밍 질문 이벤트
+    document.getElementById('btnAskGemini').addEventListener('click', async () => {
+      const prompt = document.getElementById('geminiPrompt').value.trim();
+      const outputDiv = document.getElementById('geminiOutput');
+
+      if (!prompt) {
+        alert('질문을 입력해 주세요.');
         return;
       }
 
-      const iconMap = {
-        '약': 'fa-pills text-emerald-500 bg-emerald-50',
-        '식단': 'fa-utensils text-amber-500 bg-amber-50',
-        '운동': 'fa-person-running text-blue-500 bg-blue-50',
-        '병원': 'fa-hospital text-rose-500 bg-rose-50'
-      };
+      outputDiv.innerText = 'Gemini가 생각 중입니다...';
 
-      container.className = "flex-1 overflow-y-auto space-y-3 pr-1";
-      container.innerHTML = schedule.map(item => {
-        const style = iconMap[item.type] || 'fa-check text-blue-500 bg-blue-50';
-        const [icon, colorClass] = style.split(' ');
+      try {
+        await streamGemini(prompt, (chunk, accumulatedText) => {
+          outputDiv.innerText = accumulatedText;
+        });
+      } catch (err) {
+        outputDiv.innerText = '오류 발생: ' + err.message;
+      }
+    });
 
-        return `
-          <div class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 transition bg-slate-50/50">
-            <div class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 font-semibold text-xs mt-0.5">
-              ${item.time}
-            </div>
-            <div class="flex-1">
-              <div class="text-sm font-medium text-slate-800">${item.title}</div>
-            </div>
-            <div class="w-8 h-8 rounded-lg ${colorClass} flex items-center justify-center text-xs">
-              <i class="fa-solid ${icon}"></i>
-            </div>
-          </div>
-        `;
-      }).join('');
+    // ----------------------------------------------------
+    // 4. 성적 분석 기능
+    // ----------------------------------------------------
+    document.getElementById('analyzeBtn').addEventListener('click', async () => {
+      const input = document.getElementById('gradeInput').value.trim();
+      if (!input) return alert('성적을 입력해 주세요!');
+
+      const resultBox = document.getElementById('classResult');
+      const responseBox = document.getElementById('aiResponse');
+      
+      resultBox.innerText = 'AI가 성적 분석 중...';
+      responseBox.innerText = '성적 데이터를 바탕으로 최적의 반 배치 및 학습 가이드를 생성하고 있습니다...';
+
+      const prompt = `내 성적 정보는 다음과 같아: "${input}". 
+      1. 내 성적을 종합 평가해서 [상위권 반 / 중위권 반 / 하위권 반] 중 어디에 해당하는지 첫 줄에 명확히 알려줘.
+      2. 이 반에 맞는 앞으로의 공부 방향과 격려 메시지를 작성해줘.`;
+
+      const reply = await callGemini(prompt, 'placement');
+      if (reply) {
+        responseBox.innerText = reply;
+        if (reply.includes('상위권')) {
+          resultBox.className = 'mt-3 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-700 text-center';
+          resultBox.innerText = '🎉 축하합니다! [상위권 반]에 배치되셨습니다.';
+        } else if (reply.includes('중위권')) {
+          resultBox.className = 'mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 text-center';
+          resultBox.innerText = '👍 멋집니다! [중위권 반]에 배치되셨습니다.';
+        } else {
+          resultBox.className = 'mt-3 p-3 rounded-xl bg-sky-50 border border-sky-200 text-xs font-bold text-sky-700 text-center';
+          resultBox.innerText = '🌱 가능성이 높습니다! [하위권 반] 맞춤 케어가 시작됩니다.';
+        }
+      }
+    });
+
+    // ----------------------------------------------------
+    // 5. 타이머 & 스톱워치 & 재화 시스템
+    // ----------------------------------------------------
+    let timer = null;
+    let secondsLeft = 1500; // 25분 (1500초)
+    let coins = 0;
+
+    function updateTimerDisplay() {
+      const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+      const secs = String(secondsLeft % 60).padStart(2, '0');
+      const str = `${mins}:${secs}`;
+      document.getElementById('timerDisplay').innerText = str;
+      document.getElementById('lockTimerDisplay').innerText = str;
     }
 
-    function renderDetail(text) {
-      const container = document.getElementById('detailContainer');
-      const formattedText = text.replace(/\n/g, '<br>');
-      container.innerHTML = `<div class="bg-blue-50/30 p-4 rounded-xl border border-blue-50 text-slate-700 text-sm leading-relaxed">${formattedText}</div>`;
+    function startTimer() {
+      if (timer) return;
+      document.getElementById('lockOverlay').classList.add('active');
+
+      timer = setInterval(() => {
+        if (secondsLeft > 0) {
+          secondsLeft--;
+          updateTimerDisplay();
+
+          // 10초마다 재화 1개 적립
+          if (secondsLeft % 10 === 0) {
+            coins += 1;
+            document.getElementById('coinCount').innerText = coins;
+          }
+        } else {
+          stopTimer();
+          alert('🎉 약속한 공부 시간을 완수했습니다! 보상 재화가 지급되었습니다.');
+        }
+      }, 1000);
     }
 
+    function stopTimer() {
+      clearInterval(timer);
+      timer = null;
+      document.getElementById('lockOverlay').classList.remove('active');
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startTimer);
+    document.getElementById('stopBtn').addEventListener('click', stopTimer);
+    document.getElementById('unlockBtn').addEventListener('click', stopTimer);
+
+    // ----------------------------------------------------
+    // 6. 타임테이블 추가 및 알람 체크
+    // ----------------------------------------------------
+    document.getElementById('addScheduleBtn').addEventListener('click', () => {
+      const time = prompt('시간을 입력하세요 (예: 15:30)', '15:30');
+      const task = prompt('할 일을 입력하세요', '영단어 복습');
+      if (!time || !task) return;
+
+      const list = document.getElementById('scheduleList');
+      const item = document.createElement('div');
+      item.className = 'flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100';
+      item.setAttribute('data-time', time);
+      item.setAttribute('data-task', task);
+      item.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold bg-blue-500 text-white px-2.5 py-1 rounded-md">${time}</span>
+          <span class="text-sm font-medium text-slate-700">${task}</span>
+        </div>
+        <span class="text-xs text-blue-500 font-semibold flex items-center gap-1">
+          <i class="fa-regular fa-bell"></i> 알람 대기
+        </span>
+      `;
+      list.appendChild(item);
+    });
+
+    // 매 10초마다 알람 체크
     setInterval(() => {
       const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const currentTimeStr = `${hours}:${minutes}`;
-
-      document.getElementById('currentTime').innerText = currentTimeStr;
-
-      activeSchedule.forEach(item => {
-        if (item.time === currentTimeStr && !notifiedTimes.has(item.time + item.title)) {
-          notifiedTimes.add(item.time + item.title);
-          triggerNotification(item);
+      const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      document.querySelectorAll('#scheduleList > div').forEach(el => {
+        if (el.getAttribute('data-time') === currentHM && !el.classList.contains('alerted')) {
+          el.classList.add('alerted');
+          document.getElementById('alarmMessage').innerText = `[${currentHM}] 예정된 작업: "${el.getAttribute('data-task')}" 할 시간입니다!`;
+          document.getElementById('alarmModal').showModal();
         }
       });
-    }, 1000);
+    }, 10000);
 
-    function triggerNotification(item) {
-      if (Notification.permission === "granted") {
-        new Notification("CareMate AI 건강 알림", {
-          body: `[${item.time}] ${item.title}`,
-          icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'
-        });
-      } else {
-        alert(`⏰ [${item.time}] ${item.title}`);
-      }
-    }
+    // 초기 타이머 표시
+    updateTimerDisplay();
   </script>
 </body>
 </html>

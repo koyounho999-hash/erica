@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vercel dev"
   },
-  "dependencies": {
-    "@google/genai": "^0.1.1"
-  }
+  // 올바른 예시
+"dependencies": {
+  "@google/generative-ai": "^0.21.0" 
+ }
 }

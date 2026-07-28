@@ -1,0 +1,8 @@
+{
+  "name": "gemini-schedule-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "@google/genai": "^0.1.1",
+    "@vercel/node": "^3.0.0"
+  }
+}

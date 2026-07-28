@@ -1,9 +1,11 @@
 {
-  "name": "health-manager-app",
+  "name": "vercel-gemini-feedback-app",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
   "dependencies": {
-    "@google/genai": "latest"
+    "@google/genai": "^0.1.1"
   }
 }
